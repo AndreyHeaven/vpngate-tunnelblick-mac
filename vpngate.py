@@ -6,7 +6,7 @@ import errno
 
 import requests, os, sys, tempfile, subprocess, base64, time
 
-CACHE_PATH = 'vpngate.txt'
+CACHE_PATH = 'vpngate.csv'
 
 if len(sys.argv) == 2:
 #     print('usage: ' + sys.argv[0] + ' [country name | country code]')
@@ -26,12 +26,12 @@ else:
 
 
 def get_vpn_data():
-    delta = sys.maxsize
+    delta = None
     if os.path.exists(CACHE_PATH):
         filemtime = datetime.datetime.fromtimestamp(os.path.getmtime(CACHE_PATH))
         today = datetime.datetime.today()
         delta = today - filemtime
-    if delta > datetime.timedelta(days=1):
+    if delta is None or delta > datetime.timedelta(days=1):
         with open(CACHE_PATH, 'w') as f:
             f.write(requests.get('http://www.vpngate.net/api/iphone/').text.replace('\r', ''))
     with open(CACHE_PATH, 'r') as f:
