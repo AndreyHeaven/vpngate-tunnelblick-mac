@@ -9,13 +9,15 @@ import random as rand
 CACHE_PATH = 'vpngate.csv'
 
 parser = argparse.ArgumentParser(description='Description.')
-parser.add_argument('-r', '--random', nargs='?', type=int)
-parser.add_argument('-c', '--country', nargs='?', type=str)
-parser.print_usage()
+parser.add_argument('-r', '--random', nargs='?', type=int, help='Select random row from first N rows')
+parser.add_argument('-c', '--country', nargs='?', type=str, help='Country code or name. RU or Russia')
+parser.add_argument('-p', '--print', type=int)
 args = parser.parse_args()
 country = args.country
 random = args.random
-
+if country is None and random is None:
+    parser.print_usage()
+    exit(0)
 
 def get_vpn_data():
     delta = None
@@ -24,11 +26,29 @@ def get_vpn_data():
         today = datetime.datetime.today()
         delta = today - filemtime
     if delta is None or delta > datetime.timedelta(days=1):
-        with open(CACHE_PATH, 'w') as f:
-            f.write(requests.get('http://www.vpngate.net/api/iphone/').text.replace('\r', ''))
+        link = 'http://www.vpngate.net/api/iphone/'
+        file_name = CACHE_PATH
+        with open(file_name, "wb") as f:
+            print("Downloading VPNs")
+            response = requests.get(link, stream=True)
+            total_length = response.headers.get('content-length')
+
+            if total_length is None:  # no content length header
+                f.write(response.content)
+            else:
+                dl = 0
+                total_length = int(total_length)
+                for data in response.iter_content(chunk_size=4096):
+                    dl += len(data)
+                    f.write(data)
+                    done = int(50 * dl / total_length)
+                    sys.stdout.write("\r[%s%s]" % ('=' * done, ' ' * (50 - done)))
+                    sys.stdout.flush()
+        # with open(CACHE_PATH, 'w') as f:
+        #     f.write(requests.get('http://www.vpngate.net/api/iphone/').text.replace('\r', ''))
 
 
-def find(servers) -> dict:
+def find(servers):
     supported = [s for s in servers if s['OpenVPN_ConfigData_Base64'] and len(s['OpenVPN_ConfigData_Base64']) > 0]
 
     if country:
@@ -68,7 +88,7 @@ def apply(winner):
         "~/Library/Application Support/Tunnelblick/Configurations/VPNGate.tblk/Contents/Resources/config.ovpn")
     if not os.path.exists(path):
         print("Please add first OpenVpn connection by hand, name it 'VPNGate'")
-        exit(-1);
+        exit(-1)
     f = open(path, 'wb')
     f.write(base64.b64decode(winner['OpenVPN_ConfigData_Base64']))
     f.close()
