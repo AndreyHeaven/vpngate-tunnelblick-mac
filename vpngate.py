@@ -6,6 +6,7 @@ import argparse
 
 import requests, os, sys, tempfile, subprocess, base64, time, csv, itertools
 import random as rand
+
 CACHE_PATH = 'vpngate.csv'
 
 parser = argparse.ArgumentParser(description='Description.')
@@ -18,6 +19,7 @@ random = args.random
 if country is None and random is None:
     parser.print_usage()
     exit(0)
+
 
 def get_vpn_data():
     delta = None
@@ -54,13 +56,14 @@ def find(servers):
     if country:
         # desired = filter(lambda s: s['CountryShort'] and s['CountryLong'], supported)
         desired = list(filter(lambda s:
-                                             country.lower() in s['CountryShort'] and s['CountryShort'].lower() or country.lower() in s['CountryLong'].lower(), desired)
+                              country.lower() in s['CountryShort'].lower() or country.lower() in
+                              s['CountryLong'].lower(), supported)
                        )
         found = len(desired)
         print('Found ' + str(found) + ' servers')
         if found == 0:
             exit(1)
-        winner = sorted(supported, key=lambda s: float(s['Score'].replace(',', '.')), reverse=True)[0]
+        winner = sorted(desired, key=lambda s: float(s['Score'].replace(',', '.')), reverse=True)[0]
         return winner
         # desired = [s for s in servers if
         #            ]
@@ -70,14 +73,15 @@ def find(servers):
     else:
         return supported[0]
 
+
 def apply(winner):
     print("\n== Best server ==")
-    keys=['#HostName','IP','Score','Ping']
+    keys = ['#HostName', 'IP', 'Score', 'Ping']
     filtered = dict(winner)
     del filtered['OpenVPN_ConfigData_Base64']
     for (l, d) in filtered.items():
         if l == 'Speed':
-            print('Speed: {0} MBps'.format(round(int(winner['Speed']) / 10 ** 6),2))
+            print('Speed: {0} MBps'.format(round(int(winner['Speed']) / 10 ** 6), 2))
         else:
             print(l + ': ' + d)
     # print("Country: " + winner['CountryLong'])
@@ -110,4 +114,3 @@ except Exception as e:
     raise e
     # print('Cannot get VPN servers data')
     # exit(1)
-
