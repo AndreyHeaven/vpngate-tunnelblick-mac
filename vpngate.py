@@ -7,6 +7,8 @@ import argparse
 import requests, os, sys, tempfile, subprocess, base64, time, csv, itertools
 import random as rand
 
+CONFIG_DIRS = ["~/Library/Application Support/Tunnelblick/Configurations/",
+               "/Library/Application Support/Tunnelblick/Shared/"]
 CACHE_PATH = 'vpngate.csv'
 
 parser = argparse.ArgumentParser(description='Description.')
@@ -87,17 +89,28 @@ def apply(winner):
     # print("Country: " + winner['CountryLong'])
 
     print("\nLaunching VPN...")
-    _, path = tempfile.mkstemp()
-    path = os.path.expanduser(
-        "~/Library/Application Support/Tunnelblick/Configurations/VPNGate.tblk/Contents/Resources/config.ovpn")
-    if not os.path.exists(path):
-        print("Please add first OpenVpn connection by hand, name it 'VPNGate'")
-        exit(-1)
+    path = get_tblk_path()
+    usefake = False
+    if not path or not os.path.exists(path):
+        print("Please add first OpenVpn connection by hand, name it 'VPNGate' you can use VPNGate.ovpn from you desktop as example")
+        path = os.path.expanduser("~/Desktop/VPNGate.ovpn")
+        usefake = True
+        # exit(-1)
+    else:
+        path = os.path.join(path, "Contents/Resources/config.ovpn")
     f = open(path, 'wb')
     f.write(base64.b64decode(winner['OpenVPN_ConfigData_Base64']))
     f.close()
-    x = subprocess.call(['osascript', 'script.scpt'])
-    print(x)
+    if not usefake:
+        x = subprocess.call(['osascript', 'script.scpt'])
+        print(x)
+
+
+def get_tblk_path():
+    for dir in CONFIG_DIRS:
+        dir = os.path.join(os.path.expanduser(dir), "VPNGate.tblk")
+        if os.path.exists(dir) and os.path.isdir(dir):
+            return dir
 
 
 try:
